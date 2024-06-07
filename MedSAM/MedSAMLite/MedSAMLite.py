@@ -23,6 +23,7 @@ from slicer.parameterNodeWrapper import (
     WithinRange,
 )
 
+
 from urllib.request import urlopen
 
 from slicer import vtkMRMLScalarVolumeNode
@@ -41,6 +42,9 @@ MEDSAMLITE_VERSION = 'v0.06'
 #
 # MedSAMLite
 #
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class MedSAMLite(ScriptedLoadableModule):
     """Uses ScriptedLoadableModule base class, available at:
@@ -724,6 +728,10 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
                 self.widget.ui.pbSegment.setText('Single Segmentation')
             else:
                 self.widget.ui.pbSegment.setText('Segmentation')
+
+
+
+    
 
     def volumeChanged(self, node=None):
         # self.widget.ui.pbSegment.setEnabled(False)
