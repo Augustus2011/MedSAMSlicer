@@ -20,6 +20,7 @@ include(${Slicer_USE_FILE})
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(MedSAMLite)
+add_subdirectory(med_Seg_b)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------

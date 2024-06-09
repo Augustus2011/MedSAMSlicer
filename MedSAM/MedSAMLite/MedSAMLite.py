@@ -729,8 +729,6 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
             else:
                 self.widget.ui.pbSegment.setText('Segmentation')
 
-
-
     
 
     def volumeChanged(self, node=None):
@@ -757,7 +755,7 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
             if self.volume_node is None:
                 self.captureImage()
             ################ DEBUG MODE ################
-            _, _, zrange = self.get_bounding_box()
+            _, _, zrange,_ = self.get_bounding_box()
             zmin, zmax = zrange
         else:
             zmin, zmax = -1, -1
@@ -791,7 +789,7 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
             self.captureImage()
         ################ DEBUG MODE ################
 
-        slice_idx, bbox, zrange = self.get_bounding_box()
+        slice_idx, bbox, zrange,bbox2d = self.get_bounding_box()
 
         response = requests.post(f'{serverUrl}/infer', json={"slice_idx": slice_idx, "bbox": bbox, "zrange": zrange})
         response.raise_for_status()
@@ -801,7 +799,7 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
         for frame in frames:
             seg_result[frame, :, :] = seg_data[str(frame)]
 
-        return seg_result
+        return seg_result,bbox2d
     
     def showSegmentation(self, segmentation_mask):
         segment_volume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", 'segment_'+str(int(time.time())))
@@ -825,7 +823,6 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
         current_seg_group.SetReferenceImageGeometryParameterFromVolumeNode(self.volume_node)
         slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(segment_volume, current_seg_group)
         slicer.util.updateSegmentBinaryLabelmapFromArray(segmentation_mask, current_seg_group, segment_volume.GetName(), self.volume_node)
-
         slicer.mrmlScene.RemoveNode(segment_volume)
     
     def singleSegmentation(self, serverUrl):
@@ -839,7 +836,13 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
             self.singleSegmentation(serverUrl)
 
             return
-        segmentation_mask = self.inferSegmentation(serverUrl)
+        segmentation_mask,bbox2d = self.inferSegmentation(serverUrl)
+        
+        file = open('/Users/kunkerdthaisong/intern_cariva/MedSAMSlicer/server/2dbbox_of_masked.txt','w')
+        for item in bbox2d:
+            file.write(str(item)+" ")
+        file.close()
+        
         self.showSegmentation(segmentation_mask)
     
     def get_bounding_box(self):
@@ -873,10 +876,11 @@ class MedSAMLiteLogic(ScriptedLoadableModuleLogic):
         y_min, y_max = min(ijk_points[0][1], ijk_points[1][1]), max(ijk_points[0][1], ijk_points[1][1])
         z_min, z_max = min(ijk_points[0][2], ijk_points[1][2]), max(ijk_points[0][2], ijk_points[1][2])
         bbox = [x_min, y_min, x_max, y_max]
+        bbox2d=[y_min,z_min,y_max,z_max,x_min, y_min, x_max, y_max,x_min, z_min, x_max,z_max]
         zrange = [z_min, z_max]
         slice_idx = int((zrange[0] + zrange[1]) / 2) # it is not accurate
 
-        return slice_idx, bbox, zrange
+        return slice_idx, bbox, zrange,bbox2d
     
     def preprocess_CT(self, win_level=40.0, win_width=400.0):
         self.captureImage()

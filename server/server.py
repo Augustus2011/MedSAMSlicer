@@ -4,11 +4,16 @@ import time
 import json
 import os
 
+import itertools
+
 from tqdm import tqdm
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 import uvicorn
 from numpysocket import NumpySocket
+
+import stl
+from stl import mesh
 
 import numpy as np
 from skimage import transform, io
@@ -129,10 +134,10 @@ def build_medsam_lite():
         img_size=256,
         in_chans=3,
         embed_dims=[
-            64, ## (64, 256, 256)
-            128, ## (128, 128, 128)
-            160, ## (160, 64, 64)
-            320 ## (320, 64, 64) 
+            64,
+            128,
+            160,
+            320
         ],
         depths=[2, 2, 6, 2],
         num_heads=[2, 4, 5, 10],
@@ -317,7 +322,11 @@ def infer(params: InferenceParams):
     bbox_1024_prev = np.array([params.bbox]) / np.array([W, H, W, H]) * 256
     res = {}
     
+    
+    
+
     def inf(bbox_1024_prev):
+        print("hi infer")
         mask = medsam_inference(medsam_model, embeddings[csidx], bbox_1024_prev, H, W)
         mask_t = transform.resize(mask, (256, 256), order=0, preserve_range=True, anti_aliasing=False).astype(np.uint8)
         return mask.tolist(), [get_bbox1024(mask_t)]
@@ -326,16 +335,15 @@ def infer(params: InferenceParams):
         res[csidx], bbox_1024_prev = inf(bbox_1024_prev)
         if csidx == params.slice_idx:
             bbox_1024_center_inf = bbox_1024_prev.copy()
-            # plt.imsave('server_mask.png', res[csidx])
 
     bbox_1024_prev = bbox_1024_center_inf
     for csidx in range(params.slice_idx-1, zmin, -1):
         res[csidx], bbox_1024_prev = inf(bbox_1024_prev)
 
+
+
     
     print(len(res))
-    # plt.imshow(res)
-    # plt.savefig("out.png")
 
     return json.dumps(res)
 
